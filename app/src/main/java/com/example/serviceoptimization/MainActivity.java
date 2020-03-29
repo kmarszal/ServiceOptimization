@@ -6,6 +6,7 @@ import androidx.core.app.ActivityCompat;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -20,6 +21,7 @@ import org.jcodec.api.FrameGrab;
 import org.jcodec.api.JCodecException;
 import org.jcodec.common.AndroidUtil;
 import org.jcodec.common.io.NIOUtils;
+import org.jcodec.common.io.SeekableByteChannel;
 import org.jcodec.common.model.Picture;
 
 import java.io.File;
@@ -54,47 +56,77 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onBtnPdfClick(View v) {
-        Document document = new Document();
-
-        String directoryPath = android.os.Environment.getExternalStorageDirectory().toString();
-        try {
-            PdfWriter.getInstance(document, new FileOutputStream(directoryPath + "/example.pdf"));
-
-            document.open();
-
-            Image image = Image.getInstance(directoryPath + "/example.jpg");
-
-            float scaler = ((document.getPageSize().getWidth() - document.leftMargin()
-                    - document.rightMargin()) / image.getWidth()) * 100;
-
-            image.scalePercent(scaler);
-            image.setAlignment(Image.ALIGN_CENTER | Image.ALIGN_TOP);
-
-            document.add(image);
-        } catch (DocumentException | IOException e) {
-            Toast.makeText(this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-            Log.e("error", e.getLocalizedMessage());
-        }
-
-        document.close();
+        new JpgToPdfTask().execute();
     }
 
     public void onBtnFramesClick(View v) {
-        String directoryPath = android.os.Environment.getExternalStorageDirectory().toString();
-        try {
-            File file = new File(directoryPath + "/example.mp4");
-            FrameGrab grab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(file));
-            Picture picture;
-            int frameNumber = 0;
-            while (null != (picture = grab.getNativeFrame())) {
-                if(++frameNumber % 30 == 0) {
-                    Bitmap bitmap = AndroidUtil.toBitmap(picture);
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, new FileOutputStream(String.format("%s/frame%d.png", directoryPath, frameNumber)));
-                }
+        new GetFramesTask().execute(30);
+    }
+
+    private class JpgToPdfTask extends AsyncTask<Void, Void, String> {
+        @Override
+        protected String doInBackground(Void... voids) {
+            Document document = new Document();
+
+            String directoryPath = android.os.Environment.getExternalStorageDirectory().toString();
+            try {
+                PdfWriter.getInstance(document, new FileOutputStream(directoryPath + "/example.pdf"));
+
+                document.open();
+
+                Image image = Image.getInstance(directoryPath + "/example.jpg");
+
+                float scaler = ((document.getPageSize().getWidth() - document.leftMargin()
+                        - document.rightMargin()) / image.getWidth()) * 100;
+
+                image.scalePercent(scaler);
+                image.setAlignment(Image.ALIGN_CENTER | Image.ALIGN_TOP);
+
+                document.add(image);
+            } catch (DocumentException | IOException e) {
+                Log.e("error", e.getLocalizedMessage());
+                return e.getLocalizedMessage();
             }
-        } catch (JCodecException | IOException e) {
-            Toast.makeText(this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-            Log.e("error", e.getLocalizedMessage());
+
+            document.close();
+            return getString(R.string.task_done);
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            Toast.makeText(MainActivity.this, result, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private class GetFramesTask extends AsyncTask<Integer, Void, String> {
+        @Override
+        protected String doInBackground(Integer... frames) {
+            String directoryPath = android.os.Environment.getExternalStorageDirectory().toString();
+            SeekableByteChannel ch = null;
+            try {
+                File file = new File(directoryPath + "/example.mp4");
+                ch = NIOUtils.readableChannel(file);
+                FrameGrab grab = FrameGrab.createFrameGrab(ch);
+                Picture picture;
+                int frameNumber = 0;
+                while (null != (picture = grab.getNativeFrame())) {
+                    if(++frameNumber % frames[0] == 0) {
+                        Bitmap bitmap = AndroidUtil.toBitmap(picture);
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, new FileOutputStream(String.format("%s/frame%d.png", directoryPath, frameNumber)));
+                    }
+                }
+            } catch (JCodecException | IOException e) {
+                Log.e("error", e.getLocalizedMessage());
+                return e.getLocalizedMessage();
+            } finally {
+                NIOUtils.closeQuietly(ch);
+            }
+            return getString(R.string.task_done);
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            Toast.makeText(MainActivity.this, result, Toast.LENGTH_SHORT).show();
         }
     }
 }
