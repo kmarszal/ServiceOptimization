@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Service Optimization</string>
+    <string name="save_pdf">Zapisz jpg jako pdf</string>
+    <string name="save_frames">Zapisz klatki do png</string>
+</resources>
