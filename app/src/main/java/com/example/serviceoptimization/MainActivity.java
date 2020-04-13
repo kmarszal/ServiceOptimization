@@ -4,9 +4,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -27,6 +33,13 @@ import org.jcodec.common.model.Picture;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.time.Instant;
+import java.util.Calendar;
+
+import weka.classifiers.bayes.NaiveBayesUpdateable;
+import weka.core.Instance;
+import weka.core.Instances;
+import weka.core.converters.ArffLoader;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -35,6 +48,8 @@ public class MainActivity extends AppCompatActivity {
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE
     };
+    private Intent batteryStatus;
+    private ConnectivityManager connectivityManager;
 
     private void verifyStoragePermissions() {
         int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -53,6 +68,10 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         verifyStoragePermissions();
+
+        IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        batteryStatus = this.registerReceiver(null, ifilter);
+        connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
     }
 
     public void onBtnPdfClick(View v) {
@@ -61,6 +80,23 @@ public class MainActivity extends AppCompatActivity {
 
     public void onBtnFramesClick(View v) {
         new GetFramesTask().execute(30);
+    }
+
+    public State getCurrentState() {
+        int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+        int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+        int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+        float batteryPct = level * 100 / (float)scale;
+        boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                status == BatteryManager.BATTERY_STATUS_FULL;
+        NetworkInfo info = connectivityManager.getActiveNetworkInfo();
+        Calendar calendar = Calendar.getInstance();
+
+        return new State()
+                .setBatteryLevel(batteryPct)
+                .setCharging(isCharging)
+                .setNetworkInfo(info)
+                .setTime(calendar);
     }
 
     private class JpgToPdfTask extends AsyncTask<Void, Void, String> {
@@ -95,6 +131,32 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(String result) {
             Toast.makeText(MainActivity.this, result, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private class TrainClassifier extends AsyncTask<Void, Void, Void> {
+        @Override
+        protected Void doInBackground(Void... voids) {
+            try {
+                String directoryPath = android.os.Environment.getExternalStorageDirectory().toString();
+                ArffLoader loader = new ArffLoader();
+                loader.setFile(new File(directoryPath + "/example.arff"));
+                Instances structure = loader.getStructure();
+                structure.setClassIndex(structure.numAttributes() - 1);
+
+                // train NaiveBayes
+                NaiveBayesUpdateable nb = new NaiveBayesUpdateable();
+                nb.buildClassifier(structure);
+                Instance current;
+                while ((current = loader.getNextInstance(structure)) != null)
+                    nb.updateClassifier(current);
+
+                // output generated model
+                System.out.println(nb);
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+            }
+            return null;
         }
     }
 
