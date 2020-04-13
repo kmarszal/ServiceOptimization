@@ -61,4 +61,20 @@ public class State {
     public int getConnectionSubType() {
         return connectionSubType;
     }
+
+    public int getMonth() {
+        return month;
+    }
+
+    public int getDay() {
+        return day;
+    }
+
+    public int getHour() {
+        return hour;
+    }
+
+    public long getStartTimeMillis() {
+        return startTimeMillis;
+    }
 }

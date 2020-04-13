@@ -33,13 +33,15 @@ import org.jcodec.common.model.Picture;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Calendar;
 
 import weka.classifiers.bayes.NaiveBayesUpdateable;
+import weka.core.Attribute;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ArffLoader;
+import weka.core.converters.ConverterUtils;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -97,6 +99,26 @@ public class MainActivity extends AppCompatActivity {
                 .setCharging(isCharging)
                 .setNetworkInfo(info)
                 .setTime(calendar);
+    }
+
+    public void saveData() {
+        ArrayList<Attribute> atts = Data.getAttributes();
+        Instances dataset = new Instances("MyRelation", atts, 0);
+
+        Data exampleData = new Data(getCurrentState(), getCurrentState());
+
+        String directoryPath = android.os.Environment.getExternalStorageDirectory().toString();
+        String outputFilename = directoryPath + "/example.arff";
+
+        dataset.add(exampleData.toWekaInstance());
+
+        try {
+            ConverterUtils.DataSink.write(outputFilename, dataset);
+        }
+        catch (Exception e) {
+            System.err.println("Failed to save data to: " + outputFilename);
+            e.printStackTrace();
+        }
     }
 
     private class JpgToPdfTask extends AsyncTask<Void, Void, String> {
