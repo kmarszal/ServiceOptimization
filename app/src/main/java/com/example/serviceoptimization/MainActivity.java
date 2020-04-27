@@ -33,11 +33,10 @@ import org.jcodec.common.model.Picture;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Calendar;
 
 import weka.classifiers.bayes.NaiveBayesUpdateable;
-import weka.core.Attribute;
+import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ArffLoader;
@@ -81,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onBtnFramesClick(View v) {
-        new GetFramesTask().execute(30);
+        saveData();
     }
 
     public State getCurrentState() {
@@ -102,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void saveData() {
-        ArrayList<Attribute> atts = Data.getAttributes();
+        FastVector atts = Data.getAttributes();
         Instances dataset = new Instances("MyRelation", atts, 0);
 
         Data exampleData = new Data(getCurrentState(), getCurrentState());

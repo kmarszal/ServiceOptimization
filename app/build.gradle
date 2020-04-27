@@ -35,5 +35,5 @@ dependencies {
     implementation group: 'org.jcodec', name: 'jcodec-android', version: '0.2.5'
     implementation group: 'com.itextpdf', name: 'itextg', version: '5.5.9'
     // https://mvnrepository.com/artifact/nz.ac.waikato.cms.weka/weka-stable
-    implementation group: 'nz.ac.waikato.cms.weka', name: 'weka-stable', version: '3.8.0'
+    compile group: 'nz.ac.waikato.cms.weka', name: 'weka-stable', version: '3.6.14'
 }

@@ -1,9 +1,7 @@
 package com.example.serviceoptimization;
 
-import java.util.ArrayList;
-
 import weka.core.Attribute;
-import weka.core.DenseInstance;
+import weka.core.FastVector;
 import weka.core.Instance;
 
 public class Data {
@@ -34,7 +32,7 @@ public class Data {
     }
 
     public Instance toWekaInstance(double weight) {
-        double[]        vals;
+        double[] vals;
 
         vals = new double[9];
         vals[0] = batteryConsumption;
@@ -47,21 +45,20 @@ public class Data {
         vals[7] = month;
         vals[8] = duration;
 
-        return new DenseInstance(weight, vals);
+        return new Instance(weight, vals);
     }
 
-    public static ArrayList<Attribute> getAttributes() {
-        ArrayList<Attribute> atts;
-        atts = new ArrayList<>(9);
-        atts.add(new Attribute("batteryConsumption"));
-        atts.add(new Attribute("isCharging"));
-        atts.add(new Attribute("isNetworkConnected"));
-        atts.add(new Attribute("connectionType"));
-        atts.add(new Attribute("connectionSubType"));
-        atts.add(new Attribute("hour"));
-        atts.add(new Attribute("day"));
-        atts.add(new Attribute("month"));
-        atts.add(new Attribute("duration"));
+    public static FastVector getAttributes() {
+        FastVector atts = new FastVector(9);
+        atts.addElement(new Attribute("batteryConsumption"));
+        atts.addElement(new Attribute("isCharging"));
+        atts.addElement(new Attribute("isNetworkConnected"));
+        atts.addElement(new Attribute("connectionType"));
+        atts.addElement(new Attribute("connectionSubType"));
+        atts.addElement(new Attribute("hour"));
+        atts.addElement(new Attribute("day"));
+        atts.addElement(new Attribute("month"));
+        atts.addElement(new Attribute("duration"));
         return atts;
     }
 }
