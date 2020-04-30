@@ -34,8 +34,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Calendar;
+import java.util.Random;
 
 import weka.classifiers.bayes.NaiveBayesUpdateable;
+import weka.classifiers.lazy.IBk;
 import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -76,11 +78,32 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onBtnPdfClick(View v) {
-        new JpgToPdfTask().execute();
+        try {
+            String directoryPath = android.os.Environment.getExternalStorageDirectory().toString();
+            ArffLoader loader = new ArffLoader();
+            loader.setFile(new File(directoryPath + "/example.arff"));
+            Instances structure = loader.getStructure();
+            structure.setClassIndex(structure.numAttributes() - 1);
+
+            IBk ibk = new IBk();
+            ibk.buildClassifier(structure);
+            Instance current;
+            while ((current = loader.getNextInstance(structure)) != null)
+                ibk.updateClassifier(current);
+
+            // output generated model
+            System.out.println(ibk);
+            Instance newInstance = new Data(getCurrentState(), getCurrentState()).toWekaInstance();
+            newInstance.setDataset(structure);
+            System.out.println(ibk.classifyInstance(newInstance));
+        } catch (Exception e) {
+            Toast.makeText(MainActivity.this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+        }
+        //new JpgToPdfTask().execute();
     }
 
     public void onBtnFramesClick(View v) {
-        saveData();
+        new TestTask(getCurrentState()).execute();
     }
 
     public State getCurrentState() {
@@ -116,6 +139,27 @@ public class MainActivity extends AppCompatActivity {
         }
         catch (Exception e) {
             System.err.println("Failed to save data to: " + outputFilename);
+            e.printStackTrace();
+        }
+    }
+
+    public void saveData(State before, State after) {
+        String directoryPath = android.os.Environment.getExternalStorageDirectory().toString();
+        ArffLoader loader = new ArffLoader();
+        String filename = directoryPath + "/example.arff";
+
+        try {
+            loader.setFile(new File(filename));
+            Instances dataset = loader.getStructure();
+
+            Data data = new Data(before, after);
+
+            dataset.add(data.toWekaInstance());
+
+            ConverterUtils.DataSink.write(filename, dataset);
+        }
+        catch (Exception e) {
+            System.err.println("Failed to save data to: " + filename);
             e.printStackTrace();
         }
     }
@@ -210,6 +254,31 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(String result) {
             Toast.makeText(MainActivity.this, result, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private class TestTask extends AsyncTask<Void, Void, State> {
+        State before;
+
+        TestTask(State state) {
+            this.before = state;
+        }
+
+        @Override
+        protected State doInBackground(Void... voids) {
+            try {
+                Thread.sleep(new Random().nextInt(3000) + 1000);
+            } catch (InterruptedException e) {
+                Log.e("error", e.getLocalizedMessage());
+                return null;
+            }
+            return MainActivity.this.getCurrentState();
+        }
+
+        @Override
+        protected void onPostExecute(State result) {
+            saveData(before, result);
+            Toast.makeText(MainActivity.this, R.string.task_done, Toast.LENGTH_SHORT).show();
         }
     }
 }
