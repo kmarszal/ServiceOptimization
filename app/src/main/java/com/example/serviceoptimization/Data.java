@@ -7,6 +7,7 @@ import weka.core.FastVector;
 import weka.core.Instance;
 
 public class Data {
+    private float batteryLevel;
     private int taskNumber;
     private boolean offloaded;
     private float batteryConsumption;
@@ -20,6 +21,7 @@ public class Data {
     private long duration;
 
     public Data(State before, State after) {
+        this.batteryLevel = before.getBatteryLevel();
         this.batteryConsumption = before.getBatteryLevel() - after.getBatteryLevel();
         this.isCharging = before.isCharging();
         this.isNetworkConnected = before.isNetworkConnected();
@@ -29,6 +31,29 @@ public class Data {
         this.day = before.getDay();
         this.month = before.getMonth();
         this.duration = after.getStartTimeMillis() - before.getStartTimeMillis();
+        this.offloaded = before.isToOffload();
+    }
+
+    public long getDuration() {
+        return duration;
+    }
+
+    public float getBatteryLevel() {
+        return batteryLevel;
+    }
+
+    public Data asOffloaded() {
+        this.offloaded = true;
+        return this;
+    }
+
+    public Data asNotOffloaded() {
+        this.offloaded = false;
+        return this;
+    }
+
+    public float getBatteryConsumption() {
+        return batteryConsumption;
     }
 
     public Instance toWekaInstance() {

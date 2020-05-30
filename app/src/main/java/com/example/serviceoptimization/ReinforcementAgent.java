@@ -2,21 +2,62 @@ package com.example.serviceoptimization;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 public class ReinforcementAgent {
     private double learningRate = 1;
     private double discountFactor = 0.9;
-    private Map<State, Double> knowledge;
+    private double experimentRate = 0.4;
+    private Map<Integer, Double> knowledge;
+    private Random random;
+    private boolean powerSavingMode = false;
 
     public ReinforcementAgent() {
-        this.knowledge = new HashMap<State, Double>();
+        this.knowledge = new HashMap<>();
     }
 
-    public ReinforcementAgent(double learningRate, double discountFactor) {
+    public ReinforcementAgent(double learningRate, double discountFactor, double experimentRate, boolean powerSavingMode) {
         this.learningRate = learningRate;
         this.discountFactor = discountFactor;
-        this.knowledge = new HashMap<State, Double>();
+        this.experimentRate = experimentRate;
+        this.knowledge = new HashMap<>();
+        this.random = new Random();
+        this.powerSavingMode = powerSavingMode;
     }
 
+    public void setPowerSavingMode(boolean powerSavingMode) {
+        this.powerSavingMode = powerSavingMode;
+    }
 
+    public boolean shouldOffload(State state) {
+        if(knowledge.containsKey(state.hashCode()) && knowledge.containsKey(state.hashCode() + 1000000)) {
+            boolean optimalAction = knowledge.get(state.hashCode()) < knowledge.get(state.hashCode() + 1000000);
+            if(random.nextDouble() < experimentRate) {
+                return !optimalAction;
+            }
+        }
+        else if(knowledge.containsKey(state.hashCode())) {
+            return random.nextDouble() < experimentRate;
+        }
+        else if(knowledge.containsKey(state.hashCode() + 1000000)) {
+            return random.nextDouble() > experimentRate;
+        }
+        return random.nextBoolean();
+    }
+
+    public void updateKnowledge(Data data) {
+        if(knowledge.containsKey(data.hashCode())) {
+            knowledge.put(data.hashCode(), (1 - learningRate) * knowledge.get(data.hashCode()) +
+                    learningRate * (getReward(data) + (discountFactor * Math.max(getReward(data.asNotOffloaded()), getReward(data.asOffloaded())))));
+        } else {
+            knowledge.put(data.hashCode(), getReward(data) + discountFactor * Math.max(getReward(data.asNotOffloaded()), getReward(data.asOffloaded())));
+        }
+    }
+
+    private double getReward(Data data) {
+        if(powerSavingMode) {
+            return - 1 / data.getBatteryLevel() * data.getBatteryConsumption() - 0.001 * data.getDuration();
+        }
+        return - data.getDuration() - data.getBatteryConsumption();
+    }
 }
