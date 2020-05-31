@@ -1,6 +1,7 @@
 package com.example.serviceoptimization;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.solver.widgets.ConstraintAnchor;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
@@ -14,6 +15,7 @@ import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.BatteryManager;
 import android.os.Bundle;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
@@ -45,6 +47,8 @@ import weka.core.converters.ArffLoader;
 import weka.core.converters.ConverterUtils;
 
 public class MainActivity extends AppCompatActivity {
+    private static final int TASK_PDF = 1;
+    private static final int TASK_FRAMES = 2;
 
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
     private static String[] PERMISSIONS_STORAGE = {
@@ -53,6 +57,8 @@ public class MainActivity extends AppCompatActivity {
     };
     private Intent batteryStatus;
     private ConnectivityManager connectivityManager;
+
+    private ReinforcementAgent agent;
 
     private void verifyStoragePermissions() {
         int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -75,9 +81,11 @@ public class MainActivity extends AppCompatActivity {
         IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
         batteryStatus = this.registerReceiver(null, ifilter);
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        this.agent = new ReinforcementAgent();
     }
 
     public void onBtnPdfClick(View v) {
+        /*
         try {
             String directoryPath = android.os.Environment.getExternalStorageDirectory().toString();
             ArffLoader loader = new ArffLoader();
@@ -99,7 +107,16 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Toast.makeText(MainActivity.this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
         }
-        //new JpgToPdfTask().execute();
+        */
+        State state = getCurrentState();
+        state.setTaskNumber(TASK_PDF);
+        if(agent.shouldOffload(state)) {
+            state.setToOffload(true);
+            new JpgToPdfTask(state).execute();
+        } else {
+            state.setToOffload(false);
+            new SimulatedTask(state).execute();
+        }
     }
 
     public void onBtnFramesClick(View v) {
@@ -164,38 +181,52 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private class JpgToPdfTask extends AsyncTask<Void, Void, String> {
-        @Override
-        protected String doInBackground(Void... voids) {
-            Document document = new Document();
-
-            String directoryPath = android.os.Environment.getExternalStorageDirectory().toString();
-            try {
-                PdfWriter.getInstance(document, new FileOutputStream(directoryPath + "/example.pdf"));
-
-                document.open();
-
-                Image image = Image.getInstance(directoryPath + "/example.jpg");
-
-                float scaler = ((document.getPageSize().getWidth() - document.leftMargin()
-                        - document.rightMargin()) / image.getWidth()) * 100;
-
-                image.scalePercent(scaler);
-                image.setAlignment(Image.ALIGN_CENTER | Image.ALIGN_TOP);
-
-                document.add(image);
-            } catch (DocumentException | IOException e) {
-                Log.e("error", e.getLocalizedMessage());
-                return e.getLocalizedMessage();
+    public static boolean isConnectionFast(int type, int subType) {
+        if (type == ConnectivityManager.TYPE_WIFI) {
+            return true;
+        } else if (type == ConnectivityManager.TYPE_MOBILE) {
+            switch (subType) {
+                case TelephonyManager.NETWORK_TYPE_1xRTT:
+                    return false; // ~ 50-100 kbps
+                case TelephonyManager.NETWORK_TYPE_CDMA:
+                    return false; // ~ 14-64 kbps
+                case TelephonyManager.NETWORK_TYPE_EDGE:
+                    return false; // ~ 50-100 kbps
+                case TelephonyManager.NETWORK_TYPE_EVDO_0:
+                    return true; // ~ 400-1000 kbps
+                case TelephonyManager.NETWORK_TYPE_EVDO_A:
+                    return true; // ~ 600-1400 kbps
+                case TelephonyManager.NETWORK_TYPE_GPRS:
+                    return false; // ~ 100 kbps
+                case TelephonyManager.NETWORK_TYPE_HSDPA:
+                    return true; // ~ 2-14 Mbps
+                case TelephonyManager.NETWORK_TYPE_HSPA:
+                    return true; // ~ 700-1700 kbps
+                case TelephonyManager.NETWORK_TYPE_HSUPA:
+                    return true; // ~ 1-23 Mbps
+                case TelephonyManager.NETWORK_TYPE_UMTS:
+                    return true; // ~ 400-7000 kbps
+                /*
+                 * Above API level 7, make sure to set android:targetSdkVersion
+                 * to appropriate level to use these
+                 */
+                case TelephonyManager.NETWORK_TYPE_EHRPD: // API level 11
+                    return true; // ~ 1-2 Mbps
+                case TelephonyManager.NETWORK_TYPE_EVDO_B: // API level 9
+                    return true; // ~ 5 Mbps
+                case TelephonyManager.NETWORK_TYPE_HSPAP: // API level 13
+                    return true; // ~ 10-20 Mbps
+                case TelephonyManager.NETWORK_TYPE_IDEN: // API level 8
+                    return false; // ~25 kbps
+                case TelephonyManager.NETWORK_TYPE_LTE: // API level 11
+                    return true; // ~ 10+ Mbps
+                // Unknown
+                case TelephonyManager.NETWORK_TYPE_UNKNOWN:
+                default:
+                    return false;
             }
-
-            document.close();
-            return getString(R.string.task_done);
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            Toast.makeText(MainActivity.this, result, Toast.LENGTH_SHORT).show();
+        } else {
+            return false;
         }
     }
 
@@ -222,6 +253,48 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
             }
             return null;
+        }
+    }
+
+    private class JpgToPdfTask extends AsyncTask<Void, Void, State> {
+        State before;
+
+        JpgToPdfTask(State state) {
+            this.before = state;
+        }
+
+        @Override
+        protected State doInBackground(Void... voids) {
+            Document document = new Document();
+
+            String directoryPath = android.os.Environment.getExternalStorageDirectory().toString();
+            try {
+                PdfWriter.getInstance(document, new FileOutputStream(directoryPath + "/example.pdf"));
+
+                document.open();
+
+                Image image = Image.getInstance(directoryPath + "/example.jpg");
+
+                float scaler = ((document.getPageSize().getWidth() - document.leftMargin()
+                        - document.rightMargin()) / image.getWidth()) * 100;
+
+                image.scalePercent(scaler);
+                image.setAlignment(Image.ALIGN_CENTER | Image.ALIGN_TOP);
+
+                document.add(image);
+            } catch (DocumentException | IOException e) {
+                Log.e("error", e.getLocalizedMessage());
+                return null;
+            }
+
+            document.close();
+            return MainActivity.this.getCurrentState();
+        }
+
+        @Override
+        protected void onPostExecute(State result) {
+            agent.updateKnowledge(new Data(before, result));
+            Toast.makeText(MainActivity.this, "not offloaded, execution time (millis): " +  (result.getStartTimeMillis() - before.getStartTimeMillis()), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -279,6 +352,53 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(State result) {
             saveData(before, result);
             Toast.makeText(MainActivity.this, R.string.task_done, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private class SimulatedTask extends AsyncTask<Void, Void, State> {
+        State before;
+
+        /*
+        private boolean isNetworkConnected;
+        private int taskNumber;
+        private int connectionType;
+        private int connectionSubType;
+        private int hour;
+        private int day;
+        private int month;
+        */
+
+        SimulatedTask(State state) {
+            this.before = state;
+        }
+
+        @Override
+        protected State doInBackground(Void... voids) {
+            try {
+                if(before.getTaskNumber() == TASK_PDF) {
+                    long time = 65 + new Random().nextInt(20); //half of mean execution time on phone
+                    double timeMultiplier = 1;
+                    if(before.getDay() == 4 || before.getDay() == 5 || before.getDay() == 6)
+                        timeMultiplier = 1.5;
+                    if(isConnectionFast(before.getConnectionType(), before.getConnectionSubType())) {
+                        time += 50 * timeMultiplier;
+                    } else {
+                        time += 100 * timeMultiplier;
+                    }
+                    Thread.sleep(time);
+                }
+            } catch (InterruptedException e) {
+                Log.e("error", e.getLocalizedMessage());
+                return null;
+            }
+            return MainActivity.this.getCurrentState();
+        }
+
+        @Override
+        protected void onPostExecute(State result) {
+            //saveData(before, result);
+            agent.updateKnowledge(new Data(before, result));
+            Toast.makeText(MainActivity.this, "offloaded, execution time (millis): " +  (result.getStartTimeMillis() - before.getStartTimeMillis()), Toast.LENGTH_SHORT).show();
         }
     }
 }

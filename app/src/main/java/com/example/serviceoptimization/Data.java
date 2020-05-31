@@ -21,6 +21,7 @@ public class Data {
     private long duration;
 
     public Data(State before, State after) {
+        this.taskNumber = before.getTaskNumber();
         this.batteryLevel = before.getBatteryLevel();
         this.batteryConsumption = before.getBatteryLevel() - after.getBatteryLevel();
         this.isCharging = before.isCharging();

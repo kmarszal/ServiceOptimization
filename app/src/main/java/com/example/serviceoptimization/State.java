@@ -9,6 +9,11 @@ public class State {
     private float batteryLevel;
     private boolean isCharging;
     private boolean isNetworkConnected;
+
+    public int getTaskNumber() {
+        return taskNumber;
+    }
+
     private int taskNumber;
     private int connectionType;
     private int connectionSubType;

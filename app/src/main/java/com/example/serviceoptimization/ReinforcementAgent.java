@@ -14,6 +14,7 @@ public class ReinforcementAgent {
 
     public ReinforcementAgent() {
         this.knowledge = new HashMap<>();
+        this.random = new Random();
     }
 
     public ReinforcementAgent(double learningRate, double discountFactor, double experimentRate, boolean powerSavingMode) {
@@ -35,6 +36,7 @@ public class ReinforcementAgent {
             if(random.nextDouble() < experimentRate) {
                 return !optimalAction;
             }
+            return optimalAction;
         }
         else if(knowledge.containsKey(state.hashCode())) {
             return random.nextDouble() < experimentRate;
