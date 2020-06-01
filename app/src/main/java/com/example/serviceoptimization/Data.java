@@ -23,7 +23,6 @@ public class Data {
     public Data(State before, State after) {
         this.taskNumber = before.getTaskNumber();
         this.batteryLevel = before.getBatteryLevel();
-        this.batteryConsumption = before.getBatteryLevel() - after.getBatteryLevel();
         this.isCharging = before.isCharging();
         this.isNetworkConnected = before.isNetworkConnected();
         this.connectionType = before.getConnectionType();
@@ -65,7 +64,7 @@ public class Data {
         double[] vals;
 
         vals = new double[9];
-        vals[0] = batteryConsumption;
+        vals[0] = offloaded ? 1 : 0;
         vals[1] = isCharging ? 1 : 0;
         vals[2] = isNetworkConnected ? 1 : 0;
         vals[3] = connectionType;
@@ -80,7 +79,7 @@ public class Data {
 
     public static FastVector getAttributes() {
         FastVector atts = new FastVector(9);
-        atts.addElement(new Attribute("batteryConsumption"));
+        atts.addElement(new Attribute("offloaded"));
         atts.addElement(new Attribute("isCharging"));
         atts.addElement(new Attribute("isNetworkConnected"));
         atts.addElement(new Attribute("connectionType"));

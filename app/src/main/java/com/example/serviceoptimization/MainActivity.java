@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private Intent batteryStatus;
     private ConnectivityManager connectivityManager;
 
-    private ReinforcementAgent agent;
+    private Agent agent;
 
     private void verifyStoragePermissions() {
         int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -81,7 +81,9 @@ public class MainActivity extends AppCompatActivity {
         IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
         batteryStatus = this.registerReceiver(null, ifilter);
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        this.agent = new ReinforcementAgent();
+        //this.agent = new ReinforcementAgent();
+        //this.agent = new KnnAgent(3);
+        this.agent = new NaiveBayesAgent();
     }
 
     public void onBtnPdfClick(View v) {

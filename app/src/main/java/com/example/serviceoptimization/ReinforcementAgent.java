@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-public class ReinforcementAgent {
+public class ReinforcementAgent implements Agent {
     private double learningRate = 1;
     private double discountFactor = 0.9;
     private double experimentRate = 0.4;
@@ -30,6 +30,7 @@ public class ReinforcementAgent {
         this.powerSavingMode = powerSavingMode;
     }
 
+    @Override
     public boolean shouldOffload(State state) {
         if(knowledge.containsKey(state.hashCode()) && knowledge.containsKey(state.hashCode() + 1000000)) {
             boolean optimalAction = knowledge.get(state.hashCode()) < knowledge.get(state.hashCode() + 1000000);
@@ -47,6 +48,7 @@ public class ReinforcementAgent {
         return random.nextBoolean();
     }
 
+    @Override
     public void updateKnowledge(Data data) {
         if(knowledge.containsKey(data.hashCode())) {
             knowledge.put(data.hashCode(), (1 - learningRate) * knowledge.get(data.hashCode()) +
