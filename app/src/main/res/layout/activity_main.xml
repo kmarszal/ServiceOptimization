@@ -8,7 +8,8 @@
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true">
+        android:layout_centerHorizontal="true"
+        android:id="@+id/buttonPanel">
         <Button
             android:layout_width="wrap_content"
             android:layout_height="40dp"
@@ -22,4 +23,28 @@
             android:text="@string/save_frames"
             android:onClick="onBtnFramesClick"/>
     </LinearLayout>
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/buttonPanel"
+        android:id="@+id/internetSwitchPanel"
+        android:paddingTop="10dp">
+        <Switch
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="5dp"
+            android:id="@+id/slow_internet_switch"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/connection_internet"/>
+    </LinearLayout>
+    <DatePicker
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/internetSwitchPanel"
+        android:id="@+id/date_picker"
+        android:layout_centerHorizontal="true"
+        android:paddingTop="10dp"/>
 </RelativeLayout>

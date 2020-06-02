@@ -9,11 +9,6 @@ public class State {
     private float batteryLevel;
     private boolean isCharging;
     private boolean isNetworkConnected;
-
-    public int getTaskNumber() {
-        return taskNumber;
-    }
-
     private int taskNumber;
     private int connectionType;
     private int connectionSubType;
@@ -29,6 +24,20 @@ public class State {
 
     public State setCharging(boolean charging) {
         isCharging = charging;
+        return this;
+    }
+
+    public int getTaskNumber() {
+        return taskNumber;
+    }
+
+    public State setConnectionType(int connectionType) {
+        this.connectionType = connectionType;
+        return this;
+    }
+
+    public State setConnectionSubType(int connectionSubType) {
+        this.connectionSubType = connectionSubType;
         return this;
     }
 
@@ -108,7 +117,7 @@ public class State {
         //ischarging         - 0/1
         //network connection - 0/1/2 - disconnected/wi-fi/mobile
         //hour               - 0/1/2/3 - 06.00-12.00/12.00-17.00/17.00-00.00/00.00-06.00
-        //day                - 0/1/2/3/4/5/6 - starting from monday
+        //day                - 1/2/3/4/5/6/7 - starting from sunday
         //month              - 00/01/02/03/04/05/06/07/08/09/10/11
 
         int result = 10000000 * taskNumber;

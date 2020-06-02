@@ -99,7 +99,7 @@ public class Data {
         //ischarging         - 0/1
         //network connection - 0/1/2 - disconnected/wi-fi/mobile
         //hour               - 0/1/2/3 - 06.00-12.00/12.00-17.00/17.00-00.00/00.00-06.00
-        //day                - 0/1/2/3/4/5/6 - starting from monday
+        //day                - 1/2/3/4/5/6/7 - starting from sunday
         //month              - 00/01/02/03/04/05/06/07/08/09/10/11
 
         int result = 10000000 * taskNumber;

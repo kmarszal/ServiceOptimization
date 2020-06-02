@@ -18,6 +18,8 @@ import android.os.Bundle;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
+import android.widget.DatePicker;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import com.itextpdf.text.Document;
@@ -57,6 +59,8 @@ public class MainActivity extends AppCompatActivity {
     };
     private Intent batteryStatus;
     private ConnectivityManager connectivityManager;
+    private DatePicker datePicker;
+    private Switch slowInternetSwitch;
 
     private Agent agent;
 
@@ -81,6 +85,10 @@ public class MainActivity extends AppCompatActivity {
         IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
         batteryStatus = this.registerReceiver(null, ifilter);
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        slowInternetSwitch = findViewById(R.id.slow_internet_switch);
+        datePicker = findViewById(R.id.date_picker);
+
         //this.agent = new ReinforcementAgent();
         //this.agent = new KnnAgent(3);
         this.agent = new NaiveBayesAgent();
@@ -132,13 +140,15 @@ public class MainActivity extends AppCompatActivity {
         float batteryPct = level * 100 / (float)scale;
         boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
                 status == BatteryManager.BATTERY_STATUS_FULL;
-        NetworkInfo info = connectivityManager.getActiveNetworkInfo();
+        //NetworkInfo info = connectivityManager.getActiveNetworkInfo();
         Calendar calendar = Calendar.getInstance();
+        calendar.set(datePicker.getYear(), datePicker.getMonth(), datePicker.getDayOfMonth());
 
         return new State()
                 .setBatteryLevel(batteryPct)
                 .setCharging(isCharging)
-                .setNetworkInfo(info)
+                .setConnectionSubType(slowInternetSwitch.isChecked() ? TelephonyManager.NETWORK_TYPE_EDGE : TelephonyManager.NETWORK_TYPE_LTE)
+                .setConnectionType(ConnectivityManager.TYPE_MOBILE)
                 .setTime(calendar);
     }
 
@@ -380,7 +390,7 @@ public class MainActivity extends AppCompatActivity {
                 if(before.getTaskNumber() == TASK_PDF) {
                     long time = 65 + new Random().nextInt(20); //half of mean execution time on phone
                     double timeMultiplier = 1;
-                    if(before.getDay() == 4 || before.getDay() == 5 || before.getDay() == 6)
+                    if(before.getDay() == Calendar.FRIDAY || before.getDay() == Calendar.SATURDAY || before.getDay() == Calendar.SUNDAY)
                         timeMultiplier = 1.5;
                     if(isConnectionFast(before.getConnectionType(), before.getConnectionSubType())) {
                         time += 50 * timeMultiplier;
