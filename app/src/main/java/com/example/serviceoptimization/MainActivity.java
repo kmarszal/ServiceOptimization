@@ -130,7 +130,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onBtnFramesClick(View v) {
-        new TestTask(getCurrentState()).execute();
+        State state = getCurrentState();
+        state.setTaskNumber(TASK_FRAMES);
+        if(agent.shouldOffload(state)) {
+            state.setToOffload(true);
+            new JpgToPdfTask(state).execute();
+        } else {
+            state.setToOffload(false);
+            new SimulatedTask(state).execute();
+        }
     }
 
     public State getCurrentState() {
@@ -310,9 +318,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private class GetFramesTask extends AsyncTask<Integer, Void, String> {
+    private class GetFramesTask extends AsyncTask<Integer, Void, State> {
+        State before;
+
+        GetFramesTask(State state) {
+            this.before = state;
+        }
+
         @Override
-        protected String doInBackground(Integer... frames) {
+        protected State doInBackground(Integer... frames) {
             String directoryPath = android.os.Environment.getExternalStorageDirectory().toString();
             SeekableByteChannel ch = null;
             try {
@@ -329,16 +343,17 @@ public class MainActivity extends AppCompatActivity {
                 }
             } catch (JCodecException | IOException e) {
                 Log.e("error", e.getLocalizedMessage());
-                return e.getLocalizedMessage();
+                return null;
             } finally {
                 NIOUtils.closeQuietly(ch);
             }
-            return getString(R.string.task_done);
+            return MainActivity.this.getCurrentState();
         }
 
         @Override
-        protected void onPostExecute(String result) {
-            Toast.makeText(MainActivity.this, result, Toast.LENGTH_SHORT).show();
+        protected void onPostExecute(State result) {
+            agent.updateKnowledge(new Data(before, result));
+            Toast.makeText(MainActivity.this, "offloaded, execution time (millis): " +  (result.getStartTimeMillis() - before.getStartTimeMillis()), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -387,18 +402,27 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected State doInBackground(Void... voids) {
             try {
+                double timeMultiplier = 1;
+                if(before.getDay() == Calendar.FRIDAY || before.getDay() == Calendar.SATURDAY || before.getDay() == Calendar.SUNDAY)
+                    timeMultiplier = 1.5;
+                long time = 0;
                 if(before.getTaskNumber() == TASK_PDF) {
-                    long time = 65 + new Random().nextInt(20); //half of mean execution time on phone
-                    double timeMultiplier = 1;
-                    if(before.getDay() == Calendar.FRIDAY || before.getDay() == Calendar.SATURDAY || before.getDay() == Calendar.SUNDAY)
-                        timeMultiplier = 1.5;
+                    time = 65 + new Random().nextInt(20); //half of mean execution time on phone
                     if(isConnectionFast(before.getConnectionType(), before.getConnectionSubType())) {
                         time += 50 * timeMultiplier;
                     } else {
                         time += 100 * timeMultiplier;
                     }
-                    Thread.sleep(time);
                 }
+                else {
+                    time = 100 + new Random().nextInt(20); //half of mean execution time on phone
+                    if(isConnectionFast(before.getConnectionType(), before.getConnectionSubType())) {
+                        time += 200 * timeMultiplier;
+                    } else {
+                        time += 1000 * timeMultiplier;
+                    }
+                }
+                Thread.sleep(time);
             } catch (InterruptedException e) {
                 Log.e("error", e.getLocalizedMessage());
                 return null;
