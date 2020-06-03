@@ -13,7 +13,7 @@ public class NaiveBayesAgent implements Agent {
     private Random random;
 
     public NaiveBayesAgent() {
-        FastVector attrs = Data.getAttributes();
+        FastVector attrs = Data.getAttributesNominalDuration();
         structure = new Instances("MyRelation", attrs, 0);
         structure.setClassIndex(structure.numAttributes() - 1);
         naiveBayes = new NaiveBayesUpdateable();
@@ -31,9 +31,9 @@ public class NaiveBayesAgent implements Agent {
             Data data = new Data(state, state);
             if(structure.numInstances() < 10)
                 return random.nextBoolean();
-            Instance notOffloaded = data.asNotOffloaded().toWekaInstance();
+            Instance notOffloaded = data.asNotOffloaded().toWekaInstanceNominalDuration();
             notOffloaded.setDataset(structure);
-            Instance offloaded = data.asOffloaded().toWekaInstance();
+            Instance offloaded = data.asOffloaded().toWekaInstanceNominalDuration();
             offloaded.setDataset(structure);
             double notOffloadedPrediction = naiveBayes.classifyInstance(notOffloaded);
             double offloadedPrediction = naiveBayes.classifyInstance(offloaded);
@@ -47,7 +47,7 @@ public class NaiveBayesAgent implements Agent {
     @Override
     public void updateKnowledge(Data data) {
         try {
-            Instance instance = data.toWekaInstance();
+            Instance instance = data.toWekaInstanceNominalDuration();
             instance.setDataset(structure);
             structure.add(instance);
             if(structure.numInstances() == 10)

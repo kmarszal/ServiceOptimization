@@ -77,6 +77,40 @@ public class Data {
         return new Instance(weight, vals);
     }
 
+    public Instance toWekaInstanceNominalDuration() {
+        double[] vals;
+
+        vals = new double[9];
+        vals[0] = offloaded ? 1 : 0;
+        vals[1] = isCharging ? 1 : 0;
+        vals[2] = isNetworkConnected ? 1 : 0;
+        vals[3] = connectionType;
+        vals[4] = connectionSubType;
+        vals[5] = hour;
+        vals[6] = day;
+        vals[7] = month;
+
+        int durationNominal = 0;
+        if (100 <= duration && duration < 150) {
+            durationNominal = 1;
+        }
+        if (150 <= duration && duration < 200) {
+            durationNominal = 2;
+        }
+        if (200 <= duration && duration < 250) {
+            durationNominal = 3;
+        }
+        if (250 <= duration && duration < 400) {
+            durationNominal = 4;
+        }
+        if (400 <= duration) {
+            durationNominal = 5;
+        }
+        vals[8] = durationNominal;
+
+        return new Instance(1.0, vals);
+    }
+
     public static FastVector getAttributes() {
         FastVector atts = new FastVector(9);
         atts.addElement(new Attribute("offloaded"));
@@ -88,6 +122,30 @@ public class Data {
         atts.addElement(new Attribute("day"));
         atts.addElement(new Attribute("month"));
         atts.addElement(new Attribute("duration"));
+        return atts;
+    }
+
+    public static FastVector getAttributesNominalDuration() {
+        FastVector durationValues = new FastVector(6);
+        durationValues.addElement("very short");
+        durationValues.addElement("short");
+        durationValues.addElement("medium");
+        durationValues.addElement("long");
+        durationValues.addElement("longer");
+        durationValues.addElement("very long");
+
+        Attribute duration = new Attribute("duration", durationValues);
+
+        FastVector atts = new FastVector(9);
+        atts.addElement(new Attribute("offloaded"));
+        atts.addElement(new Attribute("isCharging"));
+        atts.addElement(new Attribute("isNetworkConnected"));
+        atts.addElement(new Attribute("connectionType"));
+        atts.addElement(new Attribute("connectionSubType"));
+        atts.addElement(new Attribute("hour"));
+        atts.addElement(new Attribute("day"));
+        atts.addElement(new Attribute("month"));
+        atts.addElement(duration);
         return atts;
     }
 
