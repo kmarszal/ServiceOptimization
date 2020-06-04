@@ -47,4 +47,11 @@
         android:id="@+id/date_picker"
         android:layout_centerHorizontal="true"
         android:paddingTop="10dp"/>
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/date_picker"
+        android:layout_centerHorizontal="true"
+        android:onClick="onBtnSaveClick"
+        android:text="@string/save_results"/>
 </RelativeLayout>

@@ -1,7 +1,6 @@
 package com.example.serviceoptimization;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.solver.widgets.ConstraintAnchor;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
@@ -11,7 +10,6 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.BatteryManager;
 import android.os.Bundle;
@@ -38,10 +36,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Random;
 
 import weka.classifiers.bayes.NaiveBayesUpdateable;
-import weka.classifiers.lazy.IBk;
 import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -63,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
     private Switch slowInternetSwitch;
 
     private Agent agent;
+    private StringBuilder csvResultBuilder;
 
     private void verifyStoragePermissions() {
         int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -89,43 +88,21 @@ public class MainActivity extends AppCompatActivity {
         slowInternetSwitch = findViewById(R.id.slow_internet_switch);
         datePicker = findViewById(R.id.date_picker);
 
-        //this.agent = new ReinforcementAgent();
+        this.agent = new ReinforcementAgent();
         //this.agent = new KnnAgent(3);
-        this.agent = new NaiveBayesAgent();
+        //this.agent = new NaiveBayesAgent();
+        this.csvResultBuilder = new StringBuilder();
     }
 
     public void onBtnPdfClick(View v) {
-        /*
-        try {
-            String directoryPath = android.os.Environment.getExternalStorageDirectory().toString();
-            ArffLoader loader = new ArffLoader();
-            loader.setFile(new File(directoryPath + "/example.arff"));
-            Instances structure = loader.getStructure();
-            structure.setClassIndex(structure.numAttributes() - 1);
-
-            IBk ibk = new IBk();
-            ibk.buildClassifier(structure);
-            Instance current;
-            while ((current = loader.getNextInstance(structure)) != null)
-                ibk.updateClassifier(current);
-
-            // output generated model
-            System.out.println(ibk);
-            Instance newInstance = new Data(getCurrentState(), getCurrentState()).toWekaInstance();
-            newInstance.setDataset(structure);
-            System.out.println(ibk.classifyInstance(newInstance));
-        } catch (Exception e) {
-            Toast.makeText(MainActivity.this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-        }
-        */
         State state = getCurrentState();
         state.setTaskNumber(TASK_PDF);
         if(agent.shouldOffload(state)) {
             state.setToOffload(true);
-            new JpgToPdfTask(state).execute();
+            new SimulatedTask(state).execute();
         } else {
             state.setToOffload(false);
-            new SimulatedTask(state).execute();
+            new JpgToPdfTask(state).execute();
         }
     }
 
@@ -134,11 +111,15 @@ public class MainActivity extends AppCompatActivity {
         state.setTaskNumber(TASK_FRAMES);
         if(agent.shouldOffload(state)) {
             state.setToOffload(true);
-            new JpgToPdfTask(state).execute();
+            new SimulatedTask(state).execute();
         } else {
             state.setToOffload(false);
-            new SimulatedTask(state).execute();
+            new GetFramesTask(state).execute();
         }
+    }
+
+    public void onBtnSaveClick(View v) {
+        System.out.println(csvResultBuilder.toString());
     }
 
     public State getCurrentState() {
@@ -314,7 +295,10 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(State result) {
             agent.updateKnowledge(new Data(before, result));
-            Toast.makeText(MainActivity.this, "not offloaded, execution time (millis): " +  (result.getStartTimeMillis() - before.getStartTimeMillis()), Toast.LENGTH_SHORT).show();
+            long time = result.getStartTimeMillis() - before.getStartTimeMillis();
+            csvResultBuilder.append(time);
+            csvResultBuilder.append(';');
+            Toast.makeText(MainActivity.this, "not offloaded, execution time (millis): " + time, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -336,14 +320,13 @@ public class MainActivity extends AppCompatActivity {
                 Picture picture;
                 int frameNumber = 0;
                 while (null != (picture = grab.getNativeFrame())) {
-                    if(++frameNumber % frames[0] == 0) {
+                    if(++frameNumber % 15 == 0) {
                         Bitmap bitmap = AndroidUtil.toBitmap(picture);
                         bitmap.compress(Bitmap.CompressFormat.PNG, 100, new FileOutputStream(String.format("%s/frame%d.png", directoryPath, frameNumber)));
                     }
                 }
-            } catch (JCodecException | IOException e) {
+            } catch (Exception e) {
                 Log.e("error", e.getLocalizedMessage());
-                return null;
             } finally {
                 NIOUtils.closeQuietly(ch);
             }
@@ -353,7 +336,10 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(State result) {
             agent.updateKnowledge(new Data(before, result));
-            Toast.makeText(MainActivity.this, "offloaded, execution time (millis): " +  (result.getStartTimeMillis() - before.getStartTimeMillis()), Toast.LENGTH_SHORT).show();
+            long time = result.getStartTimeMillis() - before.getStartTimeMillis();
+            csvResultBuilder.append(time);
+            csvResultBuilder.append(';');
+            Toast.makeText(MainActivity.this, "offloaded, execution time (millis): " +  time, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -411,15 +397,15 @@ public class MainActivity extends AppCompatActivity {
                     if(isConnectionFast(before.getConnectionType(), before.getConnectionSubType())) {
                         time += 50 * timeMultiplier;
                     } else {
-                        time += 100 * timeMultiplier;
+                        time += 500 * timeMultiplier;
                     }
                 }
                 else {
-                    time = 100 + new Random().nextInt(20); //half of mean execution time on phone
+                    time = 18000 + new Random().nextInt(4000); //half of mean execution time on phone
                     if(isConnectionFast(before.getConnectionType(), before.getConnectionSubType())) {
-                        time += 200 * timeMultiplier;
-                    } else {
                         time += 1000 * timeMultiplier;
+                    } else {
+                        time += 20000 * timeMultiplier;
                     }
                 }
                 Thread.sleep(time);
@@ -434,7 +420,10 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(State result) {
             //saveData(before, result);
             agent.updateKnowledge(new Data(before, result));
-            Toast.makeText(MainActivity.this, "offloaded, execution time (millis): " +  (result.getStartTimeMillis() - before.getStartTimeMillis()), Toast.LENGTH_SHORT).show();
+            long time = result.getStartTimeMillis() - before.getStartTimeMillis();
+            csvResultBuilder.append(time);
+            csvResultBuilder.append(';');
+            Toast.makeText(MainActivity.this, "offloaded, execution time (millis): " +  time, Toast.LENGTH_SHORT).show();
         }
     }
 }

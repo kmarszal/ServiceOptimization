@@ -7,7 +7,7 @@ import java.util.Random;
 public class ReinforcementAgent implements Agent {
     private double learningRate = 1;
     private double discountFactor = 0.9;
-    private double experimentRate = 0.4;
+    private double experimentRate = 0.3;
     private Map<Integer, Double> knowledge;
     private Random random;
     private boolean powerSavingMode = false;
@@ -62,6 +62,6 @@ public class ReinforcementAgent implements Agent {
         if(powerSavingMode) {
             return - 1 / data.getBatteryLevel() * data.getBatteryConsumption() - 0.001 * data.getDuration();
         }
-        return - data.getDuration() - data.getBatteryConsumption();
+        return - data.getDuration();
     }
 }
